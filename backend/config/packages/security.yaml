@@ -36,6 +36,10 @@ security:
         - { path: ^/api/orders, roles: PUBLIC_ACCESS }
         - { path: ^/api/suppliers, roles: PUBLIC_ACCESS }
         - { path: ^/api/reports, roles: PUBLIC_ACCESS }
+        - { path: ^/api/settings/users/[0-9]+/roles, methods: [PUT], roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/settings/password, methods: [PUT], roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/settings/profile, methods: [PUT], roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/settings/branding, methods: [PUT], roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/settings, roles: PUBLIC_ACCESS }
         - { path: ^/api/branches, roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }

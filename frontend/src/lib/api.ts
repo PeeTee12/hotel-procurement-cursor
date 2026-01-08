@@ -74,15 +74,18 @@ export const productsApi = {
 
 // Orders
 export const ordersApi = {
-  list: (status?: string) => {
-    const params = status ? `?status=${status}` : ''
-    return fetchApi<{ orders: any[]; total: number }>(`/orders${params}`)
+  list: (userId?: number, status?: string) => {
+    const params = new URLSearchParams()
+    if (userId) params.append('userId', userId.toString())
+    if (status) params.append('status', status)
+    const queryString = params.toString()
+    return fetchApi<{ orders: any[]; total: number }>(`/orders${queryString ? `?${queryString}` : ''}`)
   },
   getPending: () =>
     fetchApi<{ orders: any[]; total: number }>('/orders/pending'),
   get: (id: number) =>
     fetchApi<any>(`/orders/${id}`),
-  create: (data: { branchId: number; items: any[]; priority?: string; note?: string }) =>
+  create: (data: { branchId: number; items: any[]; priority?: string; note?: string; userId?: number }) =>
     fetchApi<{ success: boolean; order: any }>('/orders', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -143,6 +146,16 @@ export const reportsApi = {
 export const branchesApi = {
   list: () =>
     fetchApi<{ branches: Array<{ id: number; name: string; address: string; organization: { id: number; name: string } }> }>('/branches'),
+  create: (data: { name: string; address?: string }) =>
+    fetchApi<{ success: boolean; branch: any }>('/branches', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (id: number, data: { name?: string; address?: string }) =>
+    fetchApi<{ success: boolean; branch: any }>(`/branches/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 }
 
 // Settings
@@ -170,10 +183,10 @@ export const settingsApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
-  updatePassword: (newPassword: string) =>
+  updatePassword: (data: { currentPassword: string; newPassword: string }) =>
     fetchApi<{ success: boolean }>('/settings/password', {
       method: 'PUT',
-      body: JSON.stringify({ newPassword }),
+      body: JSON.stringify(data),
     }),
   getColorSchemes: () =>
     fetchApi<{
@@ -184,4 +197,38 @@ export const settingsApi = {
         secondary: string
       }>
     }>('/settings/color-schemes'),
+  getOrganization: () =>
+    fetchApi<{
+      organization: {
+        id: number
+        name: string
+        logo: string | null
+        domain: string | null
+        primaryColor: string | null
+        secondaryColor: string | null
+        createdAt: string
+      }
+      branches: Array<{
+        id: number
+        name: string
+        address: string | null
+        createdAt: string
+      }>
+    }>('/settings/organization'),
+  getUsers: () =>
+    fetchApi<{
+      users: Array<{
+        id: number
+        name: string
+        email: string
+        avatar: string | null
+        roles: string[]
+        createdAt: string
+      }>
+    }>('/settings/users'),
+  updateUserRoles: (userId: number, roles: string[]) =>
+    fetchApi<{ success: boolean; user: any }>(`/settings/users/${userId}/roles`, {
+      method: 'PUT',
+      body: JSON.stringify({ roles }),
+    }),
 }

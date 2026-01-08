@@ -1,2 +1,3 @@
 # Project exclude paths
-/backend/public/
+.idea
+compose.override.yml

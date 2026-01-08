@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useCartStore } from '@/store/cartStore'
+import { useAuthStore } from '@/store/authStore'
 import { branchesApi, ordersApi } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -23,7 +23,10 @@ import {
   FileText,
   Loader2,
   Package,
+  AlertCircle,
 } from 'lucide-react'
+import { priorityLabels } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 interface CartModalProps {
   isOpen: boolean
@@ -32,9 +35,12 @@ interface CartModalProps {
 
 export default function CartModal({ isOpen, onClose }: CartModalProps) {
   const { items, updateQuantity, removeItem, clearCart, getTotal } = useCartStore()
+  const { user } = useAuthStore()
   const [selectedBranch, setSelectedBranch] = useState<string>('')
   const [note, setNote] = useState('')
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   // Fetch branches
   const { data: branchesData, isLoading: branchesLoading } = useQuery({
@@ -59,6 +65,8 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
           quantity: item.quantity,
         })),
         note: note || undefined,
+        priority: priority,
+        userId: user?.id,
       }
 
       // Create order
@@ -79,6 +87,9 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
       clearCart()
       setNote('')
       setSelectedBranch('')
+      setPriority('medium')
+      // Invalidate orders query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
       onClose()
     },
     onError: (error: Error) => {
@@ -217,6 +228,52 @@ export default function CartModal({ isOpen, onClose }: CartModalProps) {
                   </Button>
                 </div>
               ))}
+
+              {/* Priority selection */}
+              <div className="pt-4 border-t">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                  <AlertCircle className="h-4 w-4" />
+                  Priorita objednávky
+                </label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={priority === 'low' ? 'default' : 'outline'}
+                    className={cn(
+                      'flex-1',
+                      priority === 'low' && 'bg-gray-600 hover:bg-gray-700',
+                      priority !== 'low' && 'border-gray-300'
+                    )}
+                    onClick={() => setPriority('low')}
+                  >
+                    {priorityLabels.low}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={priority === 'medium' ? 'default' : 'outline'}
+                    className={cn(
+                      'flex-1',
+                      priority === 'medium' && 'bg-yellow-600 hover:bg-yellow-700',
+                      priority !== 'medium' && 'border-gray-300'
+                    )}
+                    onClick={() => setPriority('medium')}
+                  >
+                    {priorityLabels.medium}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={priority === 'high' ? 'default' : 'outline'}
+                    className={cn(
+                      'flex-1',
+                      priority === 'high' && 'bg-red-600 hover:bg-red-700',
+                      priority !== 'high' && 'border-gray-300'
+                    )}
+                    onClick={() => setPriority('high')}
+                  >
+                    {priorityLabels.high}
+                  </Button>
+                </div>
+              </div>
 
               {/* Branch selection */}
               <div className="pt-4 border-t">

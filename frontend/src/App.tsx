@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuthStore } from './store/authStore'
+import { loadColorScheme, applyColorScheme } from './lib/utils'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
@@ -32,6 +34,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  // Load color scheme on app start
+  useEffect(() => {
+    const savedColors = loadColorScheme()
+    if (savedColors) {
+      applyColorScheme(savedColors.primaryColor, savedColors.secondaryColor)
+    }
+  }, [])
+
   return (
     <QueryClientProvider client={queryClient}>
       <Routes>

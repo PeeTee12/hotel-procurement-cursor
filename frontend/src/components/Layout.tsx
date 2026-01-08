@@ -1,6 +1,8 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
 import { useCartStore } from '@/store/cartStore'
+import { ordersApi } from '@/lib/api'
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -22,13 +24,13 @@ import { cn } from '@/lib/utils'
 import { useState } from 'react'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Nakoupit', href: '/buy', icon: ShoppingCart },
-  { name: 'Moje nákupy', href: '/my-orders', icon: Package },
-  { name: 'Schvalování', href: '/approvals', icon: ClipboardCheck, badge: true },
-  { name: 'Dodavatelé', href: '/suppliers', icon: Truck },
-  { name: 'Reporty', href: '/reports', icon: BarChart3 },
-  { name: 'Nastavení', href: '/settings', icon: Settings },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, public: true },
+  { name: 'Nakoupit', href: '/buy', icon: ShoppingCart, public: true },
+  { name: 'Moje nákupy', href: '/my-orders', icon: Package, public: true },
+  { name: 'Schvalování', href: '/approvals', icon: ClipboardCheck, badge: true, public: false },
+  { name: 'Dodavatelé', href: '/suppliers', icon: Truck, public: false },
+  { name: 'Reporty', href: '/reports', icon: BarChart3, public: false },
+  { name: 'Nastavení', href: '/settings', icon: Settings, public: true },
 ]
 
 export default function Layout() {
@@ -37,13 +39,24 @@ export default function Layout() {
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
 
+  const isAdmin = user?.roles.includes('ROLE_ADMIN')
+
+  // Fetch pending orders count for admin
+  const { data: pendingOrdersData } = useQuery({
+    queryKey: ['orders', 'pending'],
+    queryFn: () => ordersApi.getPending(),
+    enabled: isAdmin,
+    refetchInterval: 30000, // Refetch every 30 seconds to keep count updated
+  })
+
+  const pendingOrdersCount = pendingOrdersData?.orders?.length ?? 0
+
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
   const cartCount = getItemCount()
-  const isAdmin = user?.roles.includes('ROLE_ADMIN')
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -81,7 +94,7 @@ export default function Layout() {
         <nav className="flex-1 p-4 space-y-1">
           {navigation.map((item) => {
             // Hide approvals for non-admin
-            if (item.href === '/approvals' && !isAdmin) return null
+            if (!isAdmin && !item.public) return null
 
             return (
               <NavLink
@@ -100,9 +113,9 @@ export default function Layout() {
                 {!collapsed && (
                   <>
                     <span className="flex-1">{item.name}</span>
-                    {item.badge && isAdmin && (
+                    {item.badge && isAdmin && pendingOrdersCount > 0 && (
                       <Badge className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5">
-                        1
+                        {pendingOrdersCount}
                       </Badge>
                     )}
                   </>

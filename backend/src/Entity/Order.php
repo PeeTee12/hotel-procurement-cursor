@@ -17,9 +17,8 @@ class Order
     public const STATUS_SUBMITTED = 'submitted';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
-    public const STATUS_ORDERED = 'ordered';
+    public const STATUS_PENDING = 'pending';
     public const STATUS_DELIVERED = 'delivered';
-    public const STATUS_CANCELLED = 'cancelled';
 
     public const PRIORITY_LOW = 'low';
     public const PRIORITY_MEDIUM = 'medium';

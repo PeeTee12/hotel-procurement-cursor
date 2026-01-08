@@ -9,6 +9,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api')]
@@ -16,6 +18,7 @@ class AuthController extends AbstractController
 {
     public function __construct(
         private UserRepository $userRepository,
+        private TokenStorageInterface $tokenStorage,
     ) {
     }
 
@@ -36,7 +39,7 @@ class AuthController extends AbstractController
     }
 
     #[Route('/users/quick-login/{id}', name: 'api_quick_login', methods: ['POST'])]
-    public function quickLogin(int $id): JsonResponse
+    public function quickLogin(int $id, Request $request): JsonResponse
     {
         $user = $this->userRepository->find($id);
 
@@ -46,6 +49,21 @@ class AuthController extends AbstractController
                 'error' => 'User not found',
             ], Response::HTTP_NOT_FOUND);
         }
+
+        // Manually authenticate the user to create a session
+        $token = new UsernamePasswordToken(
+            $user,
+            'api', // Use the firewall name from security.yaml
+            $user->getRoles()
+        );
+        
+        $this->tokenStorage->setToken($token);
+        
+        // Ensure session is started and save the token
+        $session = $request->getSession();
+        $session->start();
+        $session->set('_security_api', serialize($token));
+        $session->save();
 
         return $this->json([
             'success' => true,

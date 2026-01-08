@@ -56,7 +56,7 @@ A procurement management system for hotel chains that enables:
 ### **Tech Stack**
 
 **Backend:**
-- **PHP 8.3+** with **Symfony 7.0**
+- **PHP 8.4** with **Symfony 8.0**
 - **Doctrine ORM** for entities
 - **MariaDB 10.11** database
 - **Composer** for dependency management

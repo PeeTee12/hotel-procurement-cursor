@@ -33,13 +33,21 @@ class OrderController extends AbstractController
     public function index(#[CurrentUser] ?User $user, Request $request): JsonResponse
     {
         $status = $request->query->get('status');
+        $userId = $request->query->get('userId');
         
-        // If no user is logged in, use the first user as default (for demo purposes)
-        if (!$user) {
-            $user = $this->userRepository->findOneBy([]);
+        // If userId is provided in query, use that user
+        if ($userId) {
+            $targetUserId = (int) $userId;
+        } elseif ($user) {
+            // Use logged in user
+            $targetUserId = $user->getId();
+        } else {
+            // Fallback to first user for demo purposes
+            $defaultUser = $this->userRepository->findOneBy([]);
+            $targetUserId = $defaultUser?->getId();
         }
         
-        $orders = $user ? $this->orderRepository->findByUser($user->getId(), $status) : [];
+        $orders = $targetUserId ? $this->orderRepository->findByUser($targetUserId, $status) : [];
 
         return $this->json([
             'orders' => array_map(fn($order) => $this->serializeOrder($order), $orders),
@@ -65,6 +73,7 @@ class OrderController extends AbstractController
 
         $branchId = $data['branchId'] ?? null;
         $items = $data['items'] ?? [];
+        $userId = $data['userId'] ?? null;
 
         if (!$branchId || empty($items)) {
             return $this->json(['error' => 'Branch and items are required'], Response::HTTP_BAD_REQUEST);
@@ -75,7 +84,12 @@ class OrderController extends AbstractController
             return $this->json(['error' => 'Branch not found'], Response::HTTP_NOT_FOUND);
         }
 
-        // If no user is logged in, use the first user as default (for demo purposes)
+        // If userId is provided in request body, use that user
+        if ($userId) {
+            $user = $this->userRepository->find($userId);
+        }
+        
+        // If still no user, use the first user as default (for demo purposes)
         if (!$user) {
             $user = $this->userRepository->findOneBy([]);
             if (!$user) {

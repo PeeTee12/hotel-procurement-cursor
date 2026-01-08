@@ -191,7 +191,7 @@ class AppFixtures extends Fixture
             ['OBJ-2024-002', Order::STATUS_APPROVED, Order::PRIORITY_MEDIUM, $branches[0], $purchaseManager, '2602.00', 2],
             ['OBJ-2024-003', Order::STATUS_DELIVERED, Order::PRIORITY_LOW, $branches[1], $branchManager, '1780.00', 1],
             ['OBJ-2024-004', Order::STATUS_REJECTED, Order::PRIORITY_HIGH, $branches[2], $purchaseManager, '3600.00', 2],
-            ['OBJ-2024-005', Order::STATUS_ORDERED, Order::PRIORITY_MEDIUM, $branches[0], $purchaseManager, '640.00', 1],
+            ['OBJ-2024-005', Order::STATUS_PENDING, Order::PRIORITY_MEDIUM, $branches[0], $purchaseManager, '640.00', 1],
         ];
 
         foreach ($orderData as $i => [$orderNumber, $status, $priority, $branch, $user, $total, $itemCount]) {
@@ -208,7 +208,7 @@ class AppFixtures extends Fixture
                 $order->setSubmittedAt(new \DateTimeImmutable('-' . (5 - $i) . ' days + 1 hour'));
             }
 
-            if ($status === Order::STATUS_APPROVED || $status === Order::STATUS_DELIVERED || $status === Order::STATUS_ORDERED) {
+            if ($status === Order::STATUS_APPROVED || $status === Order::STATUS_DELIVERED || $status === Order::STATUS_PENDING) {
                 $order->setApprovedAt(new \DateTimeImmutable('-' . (5 - $i) . ' days + 2 hours'));
                 $order->setApprovedBy($admin);
             }
