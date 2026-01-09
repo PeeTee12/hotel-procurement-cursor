@@ -240,18 +240,8 @@ class SettingsController extends AbstractController
     #[Route('/users/{id}/roles', name: 'api_settings_users_update_roles', methods: ['PUT'])]
     public function updateUserRoles(int $id, Request $request): JsonResponse
     {
-        $currentUser = $this->getUser();
-
-        if (!$currentUser instanceof User) {
-            return $this->json(['error' => 'Authentication required'], Response::HTTP_UNAUTHORIZED);
-        }
-
-        // Prevent updating own roles
-        if ($currentUser->getId() === $id) {
-            return $this->json(['error' => 'Cannot update your own roles'], Response::HTTP_BAD_REQUEST);
-        }
-
         $user = $this->userRepository->find($id);
+
         if (!$user) {
             return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
         }

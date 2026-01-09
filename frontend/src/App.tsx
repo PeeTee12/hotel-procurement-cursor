@@ -12,6 +12,7 @@ import ApprovalsPage from './pages/ApprovalsPage'
 import SuppliersPage from './pages/SuppliersPage'
 import ReportsPage from './pages/ReportsPage'
 import SettingsPage from './pages/SettingsPage'
+import ShipmentsPage from './pages/ShipmentsPage'
 import { Toaster } from './components/ui/toaster'
 
 const queryClient = new QueryClient({
@@ -61,6 +62,7 @@ function App() {
           <Route path="approvals" element={<ApprovalsPage />} />
           <Route path="suppliers" element={<SuppliersPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="shipments" element={<ShipmentsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>

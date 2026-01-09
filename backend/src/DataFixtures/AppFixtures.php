@@ -9,6 +9,7 @@ use App\Entity\OrderItem;
 use App\Entity\Organization;
 use App\Entity\Product;
 use App\Entity\ProductOffer;
+use App\Entity\Shipment;
 use App\Entity\Supplier;
 use App\Entity\User;
 use App\Entity\UserOrganization;
@@ -183,8 +184,6 @@ class AppFixtures extends Fixture
             $products[] = ['product' => $product, 'offer' => $offer];
         }
 
-        $manager->flush();
-
         // Create Orders
         $orderData = [
             ['OBJ-2024-001', Order::STATUS_SUBMITTED, Order::PRIORITY_MEDIUM, $branches[0], $purchaseManager, '4028.00', 3],
@@ -221,6 +220,19 @@ class AppFixtures extends Fixture
                 $item->setQuantity(rand(1, 10));
                 $order->addItem($item);
             }
+
+            // Add shipments
+            $shipment = new Shipment();
+
+            if ($status === Order::STATUS_PENDING || $status === Order::STATUS_DELIVERED) {
+                $shipment->setTrackingNumber('T' . str_replace('-', '', $orderNumber));
+            }
+
+            if ($status === Order::STATUS_DELIVERED) {
+                $shipment->setDeliveredAt(new \DateTimeImmutable());
+            }
+
+            $order->addShipment($shipment);
 
             $manager->persist($order);
         }

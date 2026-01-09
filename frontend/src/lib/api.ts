@@ -232,3 +232,29 @@ export const settingsApi = {
       body: JSON.stringify({ roles }),
     }),
 }
+
+// Shipments
+export const shipmentsApi = {
+  list: () =>
+    fetchApi<{
+      shipments: Array<{
+        id: number
+        orderNumber: string | null
+        trackingNumber: string | null
+        createdAt: string
+        updatedAt: string | null
+        deliveredAt: string | null
+        order: { id: number; orderNumber: string } | null
+      }>
+      total: number
+    }>('/shipments'),
+  update: (id: number, data: { orderNumber?: string | null; trackingNumber?: string | null }) =>
+    fetchApi<{ success: boolean; shipment: any }>(`/shipments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deliver: (id: number) =>
+    fetchApi<{ success: boolean; shipment: any }>(`/shipments/${id}/deliver`, {
+      method: 'PUT',
+    }),
+}

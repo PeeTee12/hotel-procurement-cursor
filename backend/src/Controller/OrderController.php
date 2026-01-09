@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Order;
 use App\Entity\OrderItem;
+use App\Entity\Shipment;
 use App\Entity\User;
 use App\Repository\BranchRepository;
 use App\Repository\OrderRepository;
@@ -185,6 +186,13 @@ class OrderController extends AbstractController
         $order->setStatus(Order::STATUS_APPROVED);
         $order->setApprovedAt(new \DateTimeImmutable());
         $order->setApprovedBy($user);
+
+        // Create a new shipment for the approved order
+        $shipment = new Shipment();
+        $shipment->setOrder($order);
+        $shipment->setOrderNumber(null);
+        $shipment->setTrackingNumber(null);
+        $this->entityManager->persist($shipment);
 
         $this->entityManager->flush();
 

@@ -68,6 +68,10 @@ class Order
     #[Groups(['order:read'])]
     private Collection $items;
 
+    #[ORM\OneToMany(targetEntity: Shipment::class, mappedBy: 'order', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['order:read'])]
+    private Collection $shipments;
+
     #[ORM\Column]
     #[Groups(['order:read', 'order:list'])]
     private ?\DateTimeImmutable $createdAt = null;
@@ -87,6 +91,7 @@ class Order
     public function __construct()
     {
         $this->items = new ArrayCollection();
+        $this->shipments = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -266,5 +271,32 @@ class Order
     public function getItemCount(): int
     {
         return $this->items->count();
+    }
+
+    /**
+     * @return Collection<int, Shipment>
+     */
+    public function getShipments(): Collection
+    {
+        return $this->shipments;
+    }
+
+    public function addShipment(Shipment $shipment): static
+    {
+        if (!$this->shipments->contains($shipment)) {
+            $this->shipments->add($shipment);
+            $shipment->setOrder($this);
+        }
+        return $this;
+    }
+
+    public function removeShipment(Shipment $shipment): static
+    {
+        if ($this->shipments->removeElement($shipment)) {
+            if ($shipment->getOrder() === $this) {
+                $shipment->setOrder(null);
+            }
+        }
+        return $this;
     }
 }

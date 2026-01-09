@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   Bell,
   Search,
+  PackageCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,6 +29,7 @@ const navigation = [
   { name: 'Nakoupit', href: '/buy', icon: ShoppingCart, public: true },
   { name: 'Moje nákupy', href: '/my-orders', icon: Package, public: true },
   { name: 'Schvalování', href: '/approvals', icon: ClipboardCheck, badge: true, public: false },
+  { name: 'Zásilky', href: '/shipments', icon: PackageCheck, public: false },
   { name: 'Dodavatelé', href: '/suppliers', icon: Truck, public: false },
   { name: 'Reporty', href: '/reports', icon: BarChart3, public: false },
   { name: 'Nastavení', href: '/settings', icon: Settings, public: true },

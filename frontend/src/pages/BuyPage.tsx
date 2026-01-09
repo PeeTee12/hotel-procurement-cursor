@@ -48,48 +48,6 @@ interface Product {
   currency: string
 }
 
-// Fallback mock data in case API is not available
-// const mockCategories: Category[] = [
-//   { id: 1, name: 'Maso', icon: 'box', productCount: 3, children: [
-//     { id: 6, name: 'Hovězí', icon: null, productCount: 1, children: [] },
-//     { id: 7, name: 'Vepřové', icon: null, productCount: 1, children: [] },
-//     { id: 8, name: 'Drůbež', icon: null, productCount: 1, children: [] },
-//   ]},
-//   { id: 2, name: 'Zelenina', icon: 'box', productCount: 2, children: [] },
-//   { id: 3, name: 'Mléčné výrobky', icon: 'box', productCount: 3, children: [
-//     { id: 9, name: 'Jogurty', icon: null, productCount: 1, children: [] },
-//     { id: 10, name: 'Sýry', icon: null, productCount: 1, children: [] },
-//     { id: 11, name: 'Mléko', icon: null, productCount: 1, children: [] },
-//   ]},
-//   { id: 4, name: 'Pečivo', icon: 'box', productCount: 3, children: [
-//     { id: 12, name: 'Chléb', icon: null, productCount: 1, children: [] },
-//     { id: 13, name: 'Rohlíky', icon: null, productCount: 1, children: [] },
-//     { id: 14, name: 'Sladké', icon: null, productCount: 1, children: [] },
-//   ]},
-//   { id: 5, name: 'Nápoje', icon: 'box', productCount: 3, children: [
-//     { id: 15, name: 'Alkoholické', icon: null, productCount: 1, children: [] },
-//     { id: 16, name: 'Nealkoholické', icon: null, productCount: 1, children: [] },
-//     { id: 17, name: 'Káva & Čaj', icon: null, productCount: 1, children: [] },
-//   ]},
-// ]
-
-// const mockProducts: Product[] = [
-//   { id: 1, name: 'Bílé víno', description: 'Moravské bílé víno 0.75l', unit: 'ks', image: null, category: { id: 15, name: 'Alkoholické' }, offers: [{ id: 1, price: '149.9', currency: 'CZK', supplier: { id: 1, name: 'Fresh Foods s.r.o.' }}], bestPrice: '149.9', currency: 'CZK' },
-//   { id: 2, name: 'Bílý jogurt', description: 'Bílý jogurt 3% tuku', unit: 'ks', image: null, category: { id: 9, name: 'Jogurty' }, offers: [{ id: 2, price: '19.9', currency: 'CZK', supplier: { id: 1, name: 'Fresh Foods s.r.o.' }}], bestPrice: '19.9', currency: 'CZK' },
-//   { id: 3, name: 'Celer', description: 'Bulvový celer', unit: 'kg', image: null, category: { id: 2, name: 'Zelenina' }, offers: [{ id: 3, price: '39.9', currency: 'CZK', supplier: { id: 1, name: 'Fresh Foods s.r.o.' }}], bestPrice: '39.9', currency: 'CZK' },
-//   { id: 4, name: 'Celozrnný chléb', description: 'Celozrnný žitný chléb', unit: 'ks', image: null, category: { id: 12, name: 'Chléb' }, offers: [{ id: 4, price: '45', currency: 'CZK', supplier: { id: 1, name: 'Fresh Foods s.r.o.' }}], bestPrice: '45', currency: 'CZK' },
-//   { id: 5, name: 'Croissant', description: 'Máslový croissant', unit: 'ks', image: null, category: { id: 14, name: 'Sladké' }, offers: [{ id: 5, price: '29.9', currency: 'CZK', supplier: { id: 1, name: 'Fresh Foods s.r.o.' }}], bestPrice: '29.9', currency: 'CZK' },
-//   { id: 6, name: 'Eidam 30%', description: 'Eidam plátky 30% tuku', unit: 'bal', image: null, category: { id: 10, name: 'Sýry' }, offers: [{ id: 6, price: '89.9', currency: 'CZK', supplier: { id: 1, name: 'Fresh Foods s.r.o.' }}], bestPrice: '89.9', currency: 'CZK' },
-//   { id: 7, name: 'Hovězí svíčková', description: 'Hovězí svíčková čerstvá', unit: 'kg', image: null, category: { id: 6, name: 'Hovězí' }, offers: [{ id: 7, price: '399', currency: 'CZK', supplier: { id: 2, name: 'Premium Meats a.s.' }}], bestPrice: '399', currency: 'CZK' },
-//   { id: 8, name: 'Kuřecí prsa', description: 'Kuřecí prsa bez kosti', unit: 'kg', image: null, category: { id: 8, name: 'Drůbež' }, offers: [{ id: 8, price: '189', currency: 'CZK', supplier: { id: 2, name: 'Premium Meats a.s.' }}], bestPrice: '189', currency: 'CZK' },
-//   { id: 9, name: 'Mléko plnotučné', description: 'Mléko 3.5% 1l', unit: 'ks', image: null, category: { id: 11, name: 'Mléko' }, offers: [{ id: 9, price: '29.9', currency: 'CZK', supplier: { id: 6, name: 'Dairy Premium CZ' }}], bestPrice: '29.9', currency: 'CZK' },
-//   { id: 10, name: 'Pomerančový džus', description: 'Pomerančový džus 100% 1l', unit: 'ks', image: null, category: { id: 16, name: 'Nealkoholické' }, offers: [{ id: 10, price: '49.9', currency: 'CZK', supplier: { id: 1, name: 'Fresh Foods s.r.o.' }}], bestPrice: '49.9', currency: 'CZK' },
-//   { id: 11, name: 'Rajčata', description: 'Rajčata cherry', unit: 'kg', image: null, category: { id: 2, name: 'Zelenina' }, offers: [{ id: 11, price: '79.9', currency: 'CZK', supplier: { id: 1, name: 'Fresh Foods s.r.o.' }}], bestPrice: '79.9', currency: 'CZK' },
-//   { id: 12, name: 'Rohlík', description: 'Rohlík klasický', unit: 'ks', image: null, category: { id: 13, name: 'Rohlíky' }, offers: [{ id: 12, price: '3.5', currency: 'CZK', supplier: { id: 1, name: 'Fresh Foods s.r.o.' }}], bestPrice: '3.5', currency: 'CZK' },
-//   { id: 13, name: 'Vepřová kýta', description: 'Vepřová kýta bez kosti', unit: 'kg', image: null, category: { id: 7, name: 'Vepřové' }, offers: [{ id: 13, price: '159', currency: 'CZK', supplier: { id: 2, name: 'Premium Meats a.s.' }}], bestPrice: '159', currency: 'CZK' },
-//   { id: 14, name: 'Zrnková káva', description: 'Zrnková káva Arabica 1kg', unit: 'ks', image: null, category: { id: 17, name: 'Káva & Čaj' }, offers: [{ id: 14, price: '449', currency: 'CZK', supplier: { id: 1, name: 'Fresh Foods s.r.o.' }}], bestPrice: '449', currency: 'CZK' },
-// ]
-
 export default function BuyPage() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set())
@@ -221,13 +179,6 @@ export default function BuyPage() {
     })
   }
 
-  // Get total product count
-  const getTotalProductCount = (cats: Category[]): number => {
-    return cats.reduce((sum, cat) => {
-      return sum + cat.productCount + getTotalProductCount(cat.children)
-    }, 0)
-  }
-
   // Render category item with children
   const renderCategory = (category: Category, depth = 0) => {
     const hasChildren = category.children.length > 0
@@ -334,7 +285,6 @@ export default function BuyPage() {
               >
                 <Home className="h-4 w-4 flex-shrink-0" />
                 <span className="flex-1">Všechny produkty</span>
-                <span className="text-xs text-gray-400">{getTotalProductCount(categories)}</span>
               </button>
               
               {/* Category tree */}
@@ -363,9 +313,6 @@ export default function BuyPage() {
                 />
               </div>
             </div>
-            <span className="text-sm text-gray-500">
-              {productsLoading && !productsError ? '...' : `${products.length} produktů`}
-            </span>
           </div>
 
           {/* Product grid */}
