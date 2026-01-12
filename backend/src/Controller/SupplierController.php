@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Supplier;
+use App\Entity\User;
 use App\Repository\SupplierRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -10,6 +11,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/suppliers')]
 class SupplierController extends AbstractController
@@ -21,8 +23,12 @@ class SupplierController extends AbstractController
     }
 
     #[Route('', name: 'api_suppliers', methods: ['GET'])]
-    public function index(): JsonResponse
+    public function index(#[CurrentUser] User $user): JsonResponse
     {
+        if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
         $suppliers = $this->supplierRepository->findAll();
 
         $active = array_filter($suppliers, fn($s) => $s->getStatus() === Supplier::STATUS_ACTIVE);
@@ -39,8 +45,12 @@ class SupplierController extends AbstractController
     }
 
     #[Route('', name: 'api_suppliers_create', methods: ['POST'])]
-    public function create(Request $request): JsonResponse
+    public function create(#[CurrentUser] User $user, Request $request): JsonResponse
     {
+        if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
         $data = json_decode($request->getContent(), true);
 
         $supplier = new Supplier();
@@ -59,8 +69,12 @@ class SupplierController extends AbstractController
     }
 
     #[Route('/{id}', name: 'api_suppliers_show', methods: ['GET'])]
-    public function show(int $id): JsonResponse
+    public function show(#[CurrentUser] User $user, int $id): JsonResponse
     {
+        if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
         $supplier = $this->supplierRepository->find($id);
 
         if (!$supplier) {
@@ -71,8 +85,12 @@ class SupplierController extends AbstractController
     }
 
     #[Route('/{id}/sync', name: 'api_suppliers_sync', methods: ['POST'])]
-    public function sync(int $id): JsonResponse
+    public function sync(#[CurrentUser] User $user, int $id): JsonResponse
     {
+        if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
         $supplier = $this->supplierRepository->find($id);
 
         if (!$supplier) {

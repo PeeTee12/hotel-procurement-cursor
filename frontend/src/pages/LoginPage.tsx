@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
-import { settingsApi } from '@/lib/api'
+import { authApi, settingsApi } from '@/lib/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -56,36 +56,38 @@ export default function LoginPage() {
     }
   }, [user, navigate])
 
-  const handleQuickLogin = async (demoUser: typeof demoUsers[0]) => {
-    setLoading(demoUser.id)
-    
+  const quickLoginMutation = useMutation({
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // Set user directly (in real app, this would come from API)
-    setUser({
-      id: demoUser.id,
-      email: demoUser.email,
-      name: demoUser.name,
-      avatar: null,
-      roles: demoUser.roleKey === 'admin' ? ['ROLE_ADMIN', 'ROLE_USER'] : ['ROLE_USER'],
-      organizations: [
-        {
-          id: 1,
-          name: 'OREA Hotels',
-          role: demoUser.roleKey,
-          primaryColor: '#2D4739',
-          secondaryColor: '#C9A227',
-          branch: demoUser.roleKey !== 'admin' ? {
-            id: demoUser.id,
-            name: demoUser.id === 2 ? 'OREA Hotel Pyramida' : 'OREA Hotel Voroněž',
-          } : null,
-        },
-      ],
-    })
+    mutationFn: (userId: number) => authApi.quickLogin(userId),
+    onSuccess: (data) => {
+      let user = data.user
 
+      // Set user directly (in real app, this would come from API)
+      setUser({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: null,
+        roles: user.roles,
+        organizations: [
+          {
+            id: 1,
+            name: 'OREA Hotels',
+            role: user.roles.includes('ROLE_ADMIN') ? 'admin' : 'user',
+            primaryColor: '#2D4739',
+            secondaryColor: '#C9A227',
+          },
+        ],
+      })
+
+      navigate('/dashboard')
+    },
+  })
+
+  const handleQuickLogin = (userId: number)=> {
+    setLoading(userId)
+    quickLoginMutation.mutate(userId)
     setLoading(null)
-    navigate('/dashboard')
   }
 
   return (
@@ -124,7 +126,7 @@ export default function LoginPage() {
               {demoUsers.map((demoUser) => (
                 <button
                   key={demoUser.id}
-                  onClick={() => handleQuickLogin(demoUser)}
+                  onClick={() => handleQuickLogin(demoUser.id)}
                   disabled={loading !== null}
                   className="w-full flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-primary hover:bg-primary/5 transition-all text-left disabled:opacity-50"
                 >

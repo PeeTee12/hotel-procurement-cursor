@@ -198,6 +198,26 @@ export const settingsApi = {
 
     return response.json()
   },
+  uploadAvatar: async (file: File): Promise<{ success: boolean; avatar: string }> => {
+    const formData = new FormData()
+    formData.append('avatar', file)
+    
+    const API_BASE = import.meta.env.VITE_API_URL || '/api'
+    const url = `${API_BASE}/settings/avatar`
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'An error occurred' }))
+      throw new Error(error.message || error.error || 'An error occurred')
+    }
+
+    return response.json()
+  },
   updateProfile: (data: { name?: string; email?: string; avatar?: string }) =>
     fetchApi<{ success: boolean; user: any }>('/settings/profile', {
       method: 'PUT',
@@ -268,6 +288,8 @@ export const shipmentsApi = {
       }>
       total: number
     }>('/shipments'),
+  getPending: () =>
+      fetchApi<{ shipments: any[]; total: number }>('/shipments/pending'),
   update: (id: number, data: { orderNumber?: string | null; trackingNumber?: string | null }) =>
     fetchApi<{ success: boolean; shipment: any }>(`/shipments/${id}`, {
       method: 'PUT',

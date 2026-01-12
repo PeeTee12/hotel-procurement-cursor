@@ -68,7 +68,7 @@ export default function MyOrdersPage() {
   const stats = useMemo(() => {
     const all = orders.length
     const pending = orders.filter(o => o.status === 'submitted' || o.status === 'draft').length
-    const approved = orders.filter(o => o.status === 'approved' || o.status === 'ordered').length
+    const approved = orders.filter(o => o.status === 'approved' || o.status === 'pending').length
     const delivered = orders.filter(o => o.status === 'delivered').length
     const rejected = orders.filter(o => o.status === 'rejected').length
 
@@ -89,7 +89,7 @@ export default function MyOrdersPage() {
     if (activeFilter === 'pending') {
       filtered = filtered.filter(o => o.status === 'submitted' || o.status === 'draft')
     } else if (activeFilter === 'approved') {
-      filtered = filtered.filter(o => o.status === 'approved' || o.status === 'ordered')
+      filtered = filtered.filter(o => o.status === 'approved' || o.status === 'pending')
     } else if (activeFilter === 'delivered') {
       filtered = filtered.filter(o => o.status === 'delivered')
     } else if (activeFilter === 'rejected') {

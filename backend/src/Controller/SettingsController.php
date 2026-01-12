@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/settings')]
 class SettingsController extends AbstractController
@@ -108,6 +109,69 @@ class SettingsController extends AbstractController
                 'domain' => $org->getDomain(),
             ],
         ]);
+    }
+
+    #[Route('/avatar', name: 'api_settings_avatar_upload', methods: ['POST'])]
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->json(['error' => 'Authentication required'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $file = $request->files->get('avatar');
+        
+        if (!$file instanceof UploadedFile) {
+            return $this->json(['error' => 'No file uploaded'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Validate file type
+        $allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+        $mimeType = $file->getMimeType();
+        
+        if (!in_array($mimeType, $allowedMimeTypes)) {
+            return $this->json(['error' => 'Invalid file type. Only PNG, JPG, and SVG are allowed.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Validate file size (2MB = 2097152 bytes)
+        if ($file->getSize() > 2097152) {
+            return $this->json(['error' => 'File size exceeds 2MB limit'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Create uploads directory if it doesn't exist
+        $projectDir = $this->parameterBag->get('kernel.project_dir');
+        $uploadDir = $projectDir . '/public/uploads/avatars';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        // Generate unique filename
+        $extension = $file->guessExtension() ?: $file->getClientOriginalExtension();
+        $filename = 'avatar_' . $user->getId() . '_' . uniqid() . '.' . $extension;
+        $filepath = $uploadDir . '/' . $filename;
+
+        try {
+            // Delete old avatar if exists
+            $oldAvatar = $user->getAvatar();
+            if ($oldAvatar && file_exists($projectDir . '/public' . $oldAvatar)) {
+                unlink($projectDir . '/public' . $oldAvatar);
+            }
+
+            // Move uploaded file
+            $file->move($uploadDir, $filename);
+
+            // Save path to database (relative to public directory)
+            $avatarPath = '/uploads/avatars/' . $filename;
+            $user->setAvatar($avatarPath);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'avatar' => $avatarPath,
+            ]);
+        } catch (FileException $e) {
+            return $this->json(['error' => 'Failed to upload file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     #[Route('/profile', name: 'api_settings_profile', methods: ['PUT'])]
@@ -242,11 +306,15 @@ class SettingsController extends AbstractController
     }
 
     #[Route('/users/{id}/roles', name: 'api_settings_users_update_roles', methods: ['PUT'])]
-    public function updateUserRoles(int $id, Request $request): JsonResponse
+    public function updateUserRoles(#[CurrentUser] User $currentUser, int $id, Request $request): JsonResponse
     {
-        $user = $this->userRepository->find($id);
+        if (!in_array('ROLE_ADMIN', $currentUser->getRoles())) {
+            return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
+        }
 
-        if (!$user) {
+        $updateUser = $this->userRepository->find($id);
+
+        if (!$updateUser) {
             return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
         }
 
@@ -261,25 +329,26 @@ class SettingsController extends AbstractController
         $roles = array_filter($roles, fn($role) => $role !== 'ROLE_USER');
         $roles = array_values($roles); // Re-index array
 
-        $user->setRoles($roles);
+        $updateUser->setRoles($roles);
         $this->entityManager->flush();
 
         return $this->json([
             'success' => true,
             'user' => [
-                'id' => $user->getId(),
-                'name' => $user->getName(),
-                'email' => $user->getEmail(),
-                'roles' => $user->getRoles(),
+                'id' => $updateUser->getId(),
+                'name' => $updateUser->getName(),
+                'email' => $updateUser->getEmail(),
+                'roles' => $updateUser->getRoles(),
             ],
+            'currentUser' => [
+                'id' => $currentUser->getId(),
+            ]
         ]);
     }
 
     #[Route('/logo', name: 'api_settings_logo_upload', methods: ['POST'])]
-    public function uploadLogo(Request $request): JsonResponse
+    public function uploadLogo(#[CurrentUser] User $user, Request $request): JsonResponse
     {
-        $user = $this->getUser();
-        
         // If user is logged in, use their organization, otherwise use first organization
         if ($user instanceof User) {
             $userOrg = $user->getUserOrganizations()->first();

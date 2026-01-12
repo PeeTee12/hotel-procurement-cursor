@@ -59,11 +59,11 @@ class AuthController extends AbstractController
         
         $this->tokenStorage->setToken($token);
         
-        // Ensure session is started and save the token
-        $session = $request->getSession();
-        $session->start();
-        $session->set('_security_api', serialize($token));
-        $session->save();
+//        // Ensure session is started and save the token
+//        $session = $request->getSession();
+//        $session->start();
+//        $session->set('_security_api', serialize($token));
+//        $session->save();
 
         return $this->json([
             'success' => true,

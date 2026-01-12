@@ -31,14 +31,14 @@ security:
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
         - { path: ^/api/users/quick-login, roles: PUBLIC_ACCESS }
         - { path: ^/api/users/available, roles: PUBLIC_ACCESS }
-        - { path: ^/api/products, roles: PUBLIC_ACCESS }
-        - { path: ^/api/dashboard, roles: PUBLIC_ACCESS }
-        - { path: ^/api/orders, roles: PUBLIC_ACCESS }
-        - { path: ^/api/suppliers, roles: PUBLIC_ACCESS }
-        - { path: ^/api/reports, roles: PUBLIC_ACCESS }
-        - { path: ^/api/settings, roles: PUBLIC_ACCESS }
-        - { path: ^/api/branches, roles: PUBLIC_ACCESS }
-        - { path: ^/api/shipments, roles: PUBLIC_ACCESS }
+        - { path: ^/api/products, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/dashboard, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/orders, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/suppliers, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/reports, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/settings, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/branches, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api/shipments, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:

@@ -17,6 +17,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Switch to backend
+      run: cd backend
+
     - name: Validate composer.json and composer.lock
       run: composer validate --strict
 

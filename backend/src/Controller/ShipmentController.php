@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Shipment;
+use App\Entity\User;
 use App\Repository\ShipmentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -10,6 +11,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 #[Route('/api/shipments')]
 class ShipmentController extends AbstractController
@@ -21,8 +23,12 @@ class ShipmentController extends AbstractController
     }
 
     #[Route('', name: 'api_shipments', methods: ['GET'])]
-    public function index(): JsonResponse
+    public function index(#[CurrentUser] User $user): JsonResponse
     {
+        if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
         $shipments = $this->shipmentRepository->findAll();
 
         return $this->json([
@@ -31,9 +37,28 @@ class ShipmentController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'api_shipments_update', methods: ['PUT'])]
-    public function update(int $id, Request $request): JsonResponse
+    #[Route('/pending', name: 'api_shipments_pending', methods: ['GET'])]
+    public function getPending(#[CurrentUser] User $user): JsonResponse
     {
+        if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        $shipments = $this->shipmentRepository->findBy(['trackingNumber' => null, 'deliveredAt' => null]);
+
+        return $this->json([
+            'shipments' => array_map(fn($shipment) => $this->serializeShipment($shipment), $shipments),
+            'total' => count($shipments),
+        ]);
+    }
+
+    #[Route('/{id}', name: 'api_shipments_update', methods: ['PUT'])]
+    public function update(#[CurrentUser] User $user, int $id, Request $request): JsonResponse
+    {
+        if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
         $shipment = $this->shipmentRepository->find($id);
 
         if (!$shipment) {
@@ -63,8 +88,12 @@ class ShipmentController extends AbstractController
     }
 
     #[Route('/{id}/deliver', name: 'api_shipments_deliver', methods: ['PUT'])]
-    public function deliver(int $id): JsonResponse
+    public function deliver(#[CurrentUser] User $user, int $id): JsonResponse
     {
+        if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->json(['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
+
         $shipment = $this->shipmentRepository->find($id);
 
         if (!$shipment) {

@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
 import { useCartStore } from '@/store/cartStore'
-import { ordersApi, settingsApi } from '@/lib/api'
+import {ordersApi, settingsApi, shipmentsApi} from '@/lib/api'
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -28,8 +28,8 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, public: true },
   { name: 'Nakoupit', href: '/buy', icon: ShoppingCart, public: true },
   { name: 'Moje nákupy', href: '/my-orders', icon: Package, public: true },
-  { name: 'Schvalování', href: '/approvals', icon: ClipboardCheck, badge: true, public: false },
-  { name: 'Zásilky', href: '/shipments', icon: PackageCheck, public: false },
+  { name: 'Schvalování', href: '/approvals', icon: ClipboardCheck, badge: 'orders', public: false },
+  { name: 'Zásilky', href: '/shipments', icon: PackageCheck, badge: 'shipments', public: false },
   { name: 'Dodavatelé', href: '/suppliers', icon: Truck, public: false },
   { name: 'Reporty', href: '/reports', icon: BarChart3, public: false },
   { name: 'Nastavení', href: '/settings', icon: Settings, public: true },
@@ -51,13 +51,25 @@ export default function Layout() {
     refetchInterval: 30000, // Refetch every 30 seconds to keep count updated
   })
 
+  // Fetch pending orders count for admin
+  const { data: newShipmentsData } = useQuery({
+    queryKey: ['shipments', 'pending'],
+    queryFn: () => shipmentsApi.getPending(),
+    enabled: isAdmin,
+    refetchInterval: 30000, // Refetch every 30 seconds to keep count updated
+  })
+
   // Fetch branding for logo
   const { data: brandingData } = useQuery({
     queryKey: ['settings', 'branding'],
     queryFn: () => settingsApi.getBranding(),
   })
 
-  const pendingOrdersCount = pendingOrdersData?.orders?.length ?? 0
+  const pendingBadge = {
+    orders: pendingOrdersData?.orders?.length ?? 0,
+    shipments: newShipmentsData?.shipments?.length ?? 0,
+  }
+
   const logoUrl = brandingData?.logo
     ? (brandingData.logo.startsWith('http') 
         ? brandingData.logo 
@@ -117,6 +129,7 @@ export default function Layout() {
             // Hide approvals for non-admin
             if (!isAdmin && !item.public) return null
 
+            // @ts-ignore
             return (
               <NavLink
                 key={item.name}
@@ -134,9 +147,9 @@ export default function Layout() {
                 {!collapsed && (
                   <>
                     <span className="flex-1">{item.name}</span>
-                    {item.badge && isAdmin && pendingOrdersCount > 0 && (
+                    {item.badge && isAdmin && pendingBadge[item.badge] > 0 && (
                       <Badge className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5">
-                        {pendingOrdersCount}
+                        {pendingBadge[item.badge]}
                       </Badge>
                     )}
                   </>

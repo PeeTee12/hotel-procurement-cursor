@@ -79,6 +79,8 @@ export default function SettingsPage() {
   const [originalDomain, setOriginalDomain] = useState(brandingData?.domain || 'procure.orea.cz')
   const [logo, setLogo] = useState<string | null>(brandingData?.logo || null)
   const [logoPreview, setLogoPreview] = useState<string | null>(brandingData?.logo || null)
+  const [avatar, setAvatar] = useState<string | null>(user?.avatar || null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null)
 
   // Update domain and originalDomain when brandingData is loaded
   useEffect(() => {
@@ -91,6 +93,14 @@ export default function SettingsPage() {
       setLogoPreview(brandingData.logo)
     }
   }, [brandingData?.domain, brandingData?.logo])
+
+  // Update avatar when user changes
+  useEffect(() => {
+    if (user?.avatar !== undefined) {
+      setAvatar(user.avatar)
+      setAvatarPreview(user.avatar)
+    }
+  }, [user?.avatar])
 
   // Apply colors on mount
   useEffect(() => {
@@ -172,6 +182,71 @@ export default function SettingsPage() {
 
     // Upload file
     uploadLogoMutation.mutate(file)
+  }
+
+  // Upload avatar mutation
+  const uploadAvatarMutation = useMutation({
+    mutationFn: (file: File) => settingsApi.uploadAvatar(file),
+    onSuccess: (data) => {
+      setAvatar(data.avatar)
+      setAvatarPreview(data.avatar)
+      toast({
+        title: 'Avatar nahrán',
+        description: 'Avatar byl úspěšně nahrán.',
+      })
+      queryClient.invalidateQueries({ queryKey: ['settings'] })
+      // Update user in auth store
+      const { setUser } = useAuthStore.getState()
+      if (user) {
+        setUser({
+          ...user,
+          avatar: data.avatar,
+        })
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Chyba',
+        description: error.message || 'Nepodařilo se nahrát avatar',
+        variant: 'destructive',
+      })
+    },
+  })
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml']
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: 'Chyba',
+        description: 'Povolené formáty: PNG, JPG, SVG',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Validate file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: 'Chyba',
+        description: 'Soubor je příliš velký. Maximální velikost je 2 MB.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+
+    // Upload file
+    uploadAvatarMutation.mutate(file)
   }
 
   const handleSchemeSelect = (schemeId: string) => {
@@ -281,48 +356,50 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               {/* Logo and App Name */}
               <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Logo společnosti
-                  </label>
-                  <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
-                      {logo && logoPreview ? (
-                        <img
-                          src={logoPreview.startsWith('http') ? logoPreview : `${'http://localhost:8000'}${logoPreview}`}
-                          alt="Logo preview"
-                          className="h-full w-full object-contain"
-                        />
-                      ) : (
-                        <span className="text-2xl font-bold text-gray-400">P</span>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <label htmlFor="logo-upload">
-                        <Button
-                          variant="outline"
-                          className="gap-2 cursor-pointer"
+                {isAdmin && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Logo společnosti
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <div className="h-16 w-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+                        {logo && logoPreview ? (
+                          <img
+                            src={logoPreview.startsWith('http') ? logoPreview : `${'http://localhost:8000'}${logoPreview}`}
+                            alt="Logo preview"
+                            className="h-full w-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-2xl font-bold text-gray-400">P</span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <label htmlFor="logo-upload">
+                          <Button
+                            variant="outline"
+                            className="gap-2 cursor-pointer"
+                            disabled={!isAdmin || uploadLogoMutation.isPending}
+                            asChild
+                          >
+                            <span>
+                              <Upload className="h-4 w-4" />
+                              {uploadLogoMutation.isPending ? 'Nahrávám...' : 'Nahrát logo'}
+                            </span>
+                          </Button>
+                        </label>
+                        <input
+                          id="logo-upload"
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                          onChange={handleLogoChange}
                           disabled={!isAdmin || uploadLogoMutation.isPending}
-                          asChild
-                        >
-                          <span>
-                            <Upload className="h-4 w-4" /> 
-                            {uploadLogoMutation.isPending ? 'Nahrávám...' : 'Nahrát logo'}
-                          </span>
-                        </Button>
-                      </label>
-                      <input
-                        id="logo-upload"
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg,image/svg+xml"
-                        onChange={handleLogoChange}
-                        disabled={!isAdmin || uploadLogoMutation.isPending}
-                        className="hidden"
-                      />
+                          className="hidden"
+                        />
+                      </div>
                     </div>
+                    <p className="text-xs text-gray-500 mt-2">PNG, JPG, SVG do 2 MB</p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">PNG, JPG, SVG do 2 MB</p>
-                </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Vlastní doména
@@ -335,6 +412,52 @@ export default function SettingsPage() {
                       placeholder="procure.orea.cz"
                   />
                 </div>
+              </div>
+
+              {/* User Avatar */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Logo uživatele
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+                    {avatar && avatarPreview ? (
+                      <img
+                        src={avatarPreview.startsWith('http') ? avatarPreview : `http://localhost:8000${avatarPreview}`}
+                        alt="Avatar preview"
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-2xl font-bold text-gray-400">
+                        {user?.name?.charAt(0) || 'U'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <label htmlFor="avatar-upload">
+                      <Button
+                        variant="outline"
+                        className="gap-2 cursor-pointer"
+                        disabled={uploadAvatarMutation.isPending}
+                        asChild
+                      >
+                        <span>
+                          <Upload className="h-4 w-4" /> 
+                          {uploadAvatarMutation.isPending ? 'Nahrávám...' : 'Nahrát avatar'}
+                        </span>
+                      </Button>
+                    </label>
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                      onChange={handleAvatarChange}
+                      disabled={uploadAvatarMutation.isPending}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">PNG, JPG, SVG do 2 MB</p>
               </div>
 
               {/* Color Schemes */}

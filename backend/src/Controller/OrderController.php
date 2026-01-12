@@ -68,34 +68,21 @@ class OrderController extends AbstractController
     }
 
     #[Route('', name: 'api_orders_create', methods: ['POST'])]
-    public function create(#[CurrentUser] ?User $user, Request $request): JsonResponse
+    public function create(#[CurrentUser] User $user, Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
         $branchId = $data['branchId'] ?? null;
         $items = $data['items'] ?? [];
-        $userId = $data['userId'] ?? null;
 
         if (!$branchId || empty($items)) {
             return $this->json(['error' => 'Branch and items are required'], Response::HTTP_BAD_REQUEST);
         }
 
         $branch = $this->branchRepository->find($branchId);
+
         if (!$branch) {
             return $this->json(['error' => 'Branch not found'], Response::HTTP_NOT_FOUND);
-        }
-
-        // If userId is provided in request body, use that user
-        if ($userId) {
-            $user = $this->userRepository->find($userId);
-        }
-        
-        // If still no user, use the first user as default (for demo purposes)
-        if (!$user) {
-            $user = $this->userRepository->findOneBy([]);
-            if (!$user) {
-                return $this->json(['error' => 'No user available'], Response::HTTP_INTERNAL_SERVER_ERROR);
-            }
         }
 
         $order = new Order();
