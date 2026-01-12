@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
-import { Button } from '@/components/ui/button'
+import { settingsApi } from '@/lib/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +37,18 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const { user, setUser } = useAuthStore()
   const [loading, setLoading] = useState<number | null>(null)
+
+  // Fetch branding for logo
+  const { data: brandingData } = useQuery({
+    queryKey: ['settings', 'branding'],
+    queryFn: () => settingsApi.getBranding(),
+  })
+
+  const logoUrl = brandingData?.logo
+    ? (brandingData.logo.startsWith('http') 
+        ? brandingData.logo 
+        : `${'http://localhost:8000'}${brandingData.logo}`)
+    : null
 
   useEffect(() => {
     if (user) {
@@ -81,9 +94,17 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center text-white font-bold text-xl border border-white/20">
-              P
-            </div>
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt="Logo"
+                className="w-12 h-12 rounded-xl object-contain bg-white/10 backdrop-blur border border-white/20 p-1"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center text-white font-bold text-xl border border-white/20">
+                P
+              </div>
+            )}
             <div className="text-left">
               <h1 className="text-2xl font-bold text-white">ProcureX</h1>
               <p className="text-sm text-white/70">Hotel Procurement Hub</p>

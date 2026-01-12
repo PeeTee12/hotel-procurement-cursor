@@ -178,6 +178,26 @@ export const settingsApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+  uploadLogo: async (file: File): Promise<{ success: boolean; logo: string }> => {
+    const formData = new FormData()
+    formData.append('logo', file)
+    
+    const API_BASE = import.meta.env.VITE_API_URL || '/api'
+    const url = `${API_BASE}/settings/logo`
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'An error occurred' }))
+      throw new Error(error.message || error.error || 'An error occurred')
+    }
+
+    return response.json()
+  },
   updateProfile: (data: { name?: string; email?: string; avatar?: string }) =>
     fetchApi<{ success: boolean; user: any }>('/settings/profile', {
       method: 'PUT',

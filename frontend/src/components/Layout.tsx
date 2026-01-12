@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
 import { useCartStore } from '@/store/cartStore'
-import { ordersApi } from '@/lib/api'
+import { ordersApi, settingsApi } from '@/lib/api'
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -51,7 +51,18 @@ export default function Layout() {
     refetchInterval: 30000, // Refetch every 30 seconds to keep count updated
   })
 
+  // Fetch branding for logo
+  const { data: brandingData } = useQuery({
+    queryKey: ['settings', 'branding'],
+    queryFn: () => settingsApi.getBranding(),
+  })
+
   const pendingOrdersCount = pendingOrdersData?.orders?.length ?? 0
+  const logoUrl = brandingData?.logo
+    ? (brandingData.logo.startsWith('http') 
+        ? brandingData.logo 
+        : `${'http://localhost:8000'}${brandingData.logo}`)
+    : null
 
   const handleLogout = () => {
     logout()
@@ -73,9 +84,17 @@ export default function Layout() {
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
           {!collapsed && (
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center text-white font-bold">
-                P
-              </div>
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="w-9 h-9 rounded-lg object-contain"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center text-white font-bold">
+                  P
+                </div>
+              )}
               <div>
                 <div className="font-semibold text-gray-900">ProcureX</div>
                 <div className="text-xs text-gray-500">Orea Platform</div>

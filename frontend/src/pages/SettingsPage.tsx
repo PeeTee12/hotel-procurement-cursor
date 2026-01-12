@@ -77,6 +77,8 @@ export default function SettingsPage() {
   const [secondaryColor, setSecondaryColor] = useState(defaultSecondary)
   const [domain, setDomain] = useState(brandingData?.domain || 'procure.orea.cz')
   const [originalDomain, setOriginalDomain] = useState(brandingData?.domain || 'procure.orea.cz')
+  const [logo, setLogo] = useState<string | null>(brandingData?.logo || null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(brandingData?.logo || null)
 
   // Update domain and originalDomain when brandingData is loaded
   useEffect(() => {
@@ -84,7 +86,11 @@ export default function SettingsPage() {
       setDomain(brandingData.domain || '')
       setOriginalDomain(brandingData.domain || '')
     }
-  }, [brandingData?.domain])
+    if (brandingData?.logo !== undefined) {
+      setLogo(brandingData.logo)
+      setLogoPreview(brandingData.logo)
+    }
+  }, [brandingData?.domain, brandingData?.logo])
 
   // Apply colors on mount
   useEffect(() => {
@@ -110,6 +116,63 @@ export default function SettingsPage() {
       })
     },
   })
+
+  // Upload logo mutation
+  const uploadLogoMutation = useMutation({
+    mutationFn: (file: File) => settingsApi.uploadLogo(file),
+    onSuccess: (data) => {
+      setLogo(data.logo)
+      setLogoPreview(data.logo)
+      toast({
+        title: 'Logo nahráno',
+        description: 'Logo bylo úspěšně nahráno.',
+      })
+      queryClient.invalidateQueries({ queryKey: ['settings'] })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Chyba',
+        description: error.message || 'Nepodařilo se nahrát logo',
+        variant: 'destructive',
+      })
+    },
+  })
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml']
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: 'Chyba',
+        description: 'Povolené formáty: PNG, JPG, SVG',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Validate file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: 'Chyba',
+        description: 'Soubor je příliš velký. Maximální velikost je 2 MB.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+
+    // Upload file
+    uploadLogoMutation.mutate(file)
+  }
 
   const handleSchemeSelect = (schemeId: string) => {
     const scheme = colorSchemes.find(s => s.id === schemeId)
@@ -157,7 +220,7 @@ export default function SettingsPage() {
     // Only save if domain has changed and user is admin
     if (isAdmin && domain !== originalDomain) {
       updateMutation.mutate(
-        { domain: domain || null },
+        { domain: domain },
         {
           onSuccess: () => {
             // Update originalDomain after successful save
@@ -223,12 +286,40 @@ export default function SettingsPage() {
                     Logo společnosti
                   </label>
                   <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-2xl font-bold text-gray-400">
-                      P
+                    <div className="h-16 w-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+                      {logo && logoPreview ? (
+                        <img
+                          src={logoPreview.startsWith('http') ? logoPreview : `${'http://localhost:8000'}${logoPreview}`}
+                          alt="Logo preview"
+                          className="h-full w-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-2xl font-bold text-gray-400">P</span>
+                      )}
                     </div>
-                    <Button variant="outline" className="gap-2" disabled>
-                      <Upload className="h-4 w-4" /> Nahrát logo
-                    </Button>
+                    <div className="flex-1">
+                      <label htmlFor="logo-upload">
+                        <Button
+                          variant="outline"
+                          className="gap-2 cursor-pointer"
+                          disabled={!isAdmin || uploadLogoMutation.isPending}
+                          asChild
+                        >
+                          <span>
+                            <Upload className="h-4 w-4" /> 
+                            {uploadLogoMutation.isPending ? 'Nahrávám...' : 'Nahrát logo'}
+                          </span>
+                        </Button>
+                      </label>
+                      <input
+                        id="logo-upload"
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                        onChange={handleLogoChange}
+                        disabled={!isAdmin || uploadLogoMutation.isPending}
+                        className="hidden"
+                      />
+                    </div>
                   </div>
                   <p className="text-xs text-gray-500 mt-2">PNG, JPG, SVG do 2 MB</p>
                 </div>

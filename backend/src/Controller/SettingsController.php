@@ -9,6 +9,9 @@ use App\Repository\OrganizationRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,6 +27,7 @@ class SettingsController extends AbstractController
         private UserRepository $userRepository,
         private EntityManagerInterface $entityManager,
         private UserPasswordHasherInterface $passwordHasher,
+        private ParameterBagInterface $parameterBag,
     ) {
     }
 
@@ -269,6 +273,82 @@ class SettingsController extends AbstractController
                 'roles' => $user->getRoles(),
             ],
         ]);
+    }
+
+    #[Route('/logo', name: 'api_settings_logo_upload', methods: ['POST'])]
+    public function uploadLogo(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+        
+        // If user is logged in, use their organization, otherwise use first organization
+        if ($user instanceof User) {
+            $userOrg = $user->getUserOrganizations()->first();
+            if ($userOrg) {
+                $org = $userOrg->getOrganization();
+            } else {
+                $org = $this->organizationRepository->findOneBy([]);
+            }
+        } else {
+            $org = $this->organizationRepository->findOneBy([]);
+        }
+
+        if (!$org) {
+            return $this->json(['error' => 'No organization found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $file = $request->files->get('logo');
+        
+        if (!$file instanceof UploadedFile) {
+            return $this->json(['error' => 'No file uploaded'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Validate file type
+        $allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+        $mimeType = $file->getMimeType();
+        
+        if (!in_array($mimeType, $allowedMimeTypes)) {
+            return $this->json(['error' => 'Invalid file type. Only PNG, JPG, and SVG are allowed.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Validate file size (2MB = 2097152 bytes)
+        if ($file->getSize() > 2097152) {
+            return $this->json(['error' => 'File size exceeds 2MB limit'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Create uploads directory if it doesn't exist
+        $projectDir = $this->parameterBag->get('kernel.project_dir');
+        $uploadDir = $projectDir . '/public/uploads/logos';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        // Generate unique filename
+        $extension = $file->guessExtension() ?: $file->getClientOriginalExtension();
+        $filename = 'logo_' . uniqid() . '.' . $extension;
+        $filepath = $uploadDir . '/' . $filename;
+
+        try {
+            // Delete old logo if exists
+            $oldLogo = $org->getLogo();
+            if ($oldLogo && file_exists($projectDir . '/public' . $oldLogo)) {
+                unlink($projectDir . '/public' . $oldLogo);
+            }
+
+            // Move uploaded file
+            $file->move($uploadDir, $filename);
+
+            // Save path to database (relative to public directory)
+            $logoPath = '/uploads/logos/' . $filename;
+            $org->setLogo($logoPath);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'logo' => $logoPath,
+            ]);
+        } catch (FileException $e) {
+            return $this->json(['error' => 'Failed to upload file: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     #[Route('/color-schemes', name: 'api_settings_color_schemes', methods: ['GET'])]
