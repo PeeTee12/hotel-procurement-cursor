@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import {useEffect, useState} from 'react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, public: true },
@@ -40,8 +40,18 @@ export default function Layout() {
   const { getItemCount } = useCartStore()
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
+  const [avatar, setAvatar] = useState<string | null>(user?.avatar || null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null)
 
   const isAdmin = user?.roles.includes('ROLE_ADMIN')
+
+  // Update avatar when user changes
+  useEffect(() => {
+    if (user?.avatar !== undefined) {
+      setAvatar(user.avatar)
+      setAvatarPreview(user.avatar)
+    }
+  }, [user?.avatar])
 
   // Fetch pending orders count for admin
   const { data: pendingOrdersData } = useQuery({
@@ -162,11 +172,21 @@ export default function Layout() {
         {/* User */}
         <div className="p-4 border-t border-gray-100">
           <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
-            <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-gray-100 text-gray-600 text-sm">
-                {user?.name?.charAt(0) || 'U'}
-              </AvatarFallback>
-            </Avatar>
+            <div className="h-9 w-9 rounded-3xl border border-solid border-gray-300 flex items-center justify-center overflow-hidden">
+              {avatar && avatarPreview ? (
+                  <img
+                      src={avatarPreview.startsWith('http') ? avatarPreview : `http://localhost:8000${avatarPreview}`}
+                      alt="Avatar preview"
+                      className="h-auto w-full object-cover"
+                  />
+              ) : (
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-gray-100 text-gray-600 text-sm">
+                      {user?.name?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+              )}
+            </div>
             {!collapsed && (
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 truncate">{user?.name}</div>

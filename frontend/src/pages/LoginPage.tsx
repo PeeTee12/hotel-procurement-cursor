@@ -67,7 +67,7 @@ export default function LoginPage() {
         id: user.id,
         email: user.email,
         name: user.name,
-        avatar: null,
+        avatar: user.avatar,
         roles: user.roles,
         organizations: [
           {
