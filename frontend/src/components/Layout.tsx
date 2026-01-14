@@ -75,7 +75,7 @@ export default function Layout() {
     queryFn: () => settingsApi.getBranding(),
   })
 
-  const pendingBadge = {
+  const pendingBadge: Record<string, number> = {
     orders: pendingOrdersData?.orders?.length ?? 0,
     shipments: newShipmentsData?.shipments?.length ?? 0,
   }

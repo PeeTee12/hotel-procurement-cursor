@@ -2,9 +2,11 @@
 
 namespace App\Controller;
 
+use App\Entity\Category;
 use App\Entity\Organization;
 use App\Entity\User;
 use App\Repository\BranchRepository;
+use App\Repository\CategoryRepository;
 use App\Repository\OrganizationRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,6 +28,7 @@ class SettingsController extends AbstractController
         private OrganizationRepository $organizationRepository,
         private BranchRepository $branchRepository,
         private UserRepository $userRepository,
+        private CategoryRepository $categoryRepository,
         private EntityManagerInterface $entityManager,
         private UserPasswordHasherInterface $passwordHasher,
         private ParameterBagInterface $parameterBag,
@@ -463,5 +466,171 @@ class SettingsController extends AbstractController
                 ],
             ],
         ]);
+    }
+
+    #[Route('/categories', name: 'api_settings_categories', methods: ['GET'])]
+    public function getCategories(): JsonResponse
+    {
+        $categories = $this->categoryRepository->findRootCategories();
+        
+        return $this->json([
+            'categories' => array_map(fn($cat) => $this->serializeCategory($cat), $categories),
+        ]);
+    }
+
+    #[Route('/categories', name: 'api_settings_categories_create', methods: ['POST'])]
+    public function createCategory(#[CurrentUser] User $user, Request $request): JsonResponse
+    {
+        if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (!isset($data['name']) || empty(trim($data['name']))) {
+            return $this->json(['error' => 'Category name is required'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $category = new Category();
+        $category->setName(trim($data['name']));
+        
+        if (isset($data['icon'])) {
+            $category->setIcon(trim($data['icon']) ?: null);
+        }
+
+        if (isset($data['parentId']) && $data['parentId']) {
+            $parent = $this->categoryRepository->find($data['parentId']);
+            if (!$parent) {
+                return $this->json(['error' => 'Parent category not found'], Response::HTTP_NOT_FOUND);
+            }
+            $category->setParent($parent);
+        }
+
+        $this->entityManager->persist($category);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'category' => $this->serializeCategoryFlat($category),
+        ], Response::HTTP_CREATED);
+    }
+
+    #[Route('/categories/{id}', name: 'api_settings_categories_update', methods: ['PUT'])]
+    public function updateCategory(#[CurrentUser] User $user, int $id, Request $request): JsonResponse
+    {
+        if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
+        }
+
+        $category = $this->categoryRepository->find($id);
+        if (!$category) {
+            return $this->json(['error' => 'Category not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        if (isset($data['name'])) {
+            if (empty(trim($data['name']))) {
+                return $this->json(['error' => 'Category name cannot be empty'], Response::HTTP_BAD_REQUEST);
+            }
+            $category->setName(trim($data['name']));
+        }
+
+        if (isset($data['icon'])) {
+            $category->setIcon(trim($data['icon']) ?: null);
+        }
+
+        if (isset($data['parentId'])) {
+            if ($data['parentId'] === null || $data['parentId'] === '') {
+                $category->setParent(null);
+            } else {
+                $parent = $this->categoryRepository->find($data['parentId']);
+                if (!$parent) {
+                    return $this->json(['error' => 'Parent category not found'], Response::HTTP_NOT_FOUND);
+                }
+                // Prevent setting category as its own parent
+                if ($parent->getId() === $category->getId()) {
+                    return $this->json(['error' => 'Category cannot be its own parent'], Response::HTTP_BAD_REQUEST);
+                }
+                // Prevent circular references
+                $currentParent = $parent;
+                while ($currentParent) {
+                    if ($currentParent->getId() === $category->getId()) {
+                        return $this->json(['error' => 'Circular reference detected'], Response::HTTP_BAD_REQUEST);
+                    }
+                    $currentParent = $currentParent->getParent();
+                }
+                $category->setParent($parent);
+            }
+        }
+
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'category' => $this->serializeCategoryFlat($category),
+        ]);
+    }
+
+    #[Route('/categories/{id}', name: 'api_settings_categories_delete', methods: ['DELETE'])]
+    public function deleteCategory(#[CurrentUser] User $user, int $id): JsonResponse
+    {
+        if (!in_array('ROLE_ADMIN', $user->getRoles())) {
+            return $this->json(['error' => 'Access denied'], Response::HTTP_FORBIDDEN);
+        }
+
+        $category = $this->categoryRepository->find($id);
+        if (!$category) {
+            return $this->json(['error' => 'Category not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Check if category has products
+        if ($category->getProducts()->count() > 0) {
+            return $this->json(['error' => 'Cannot delete category with products'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Check if category has children
+        if ($category->getChildren()->count() > 0) {
+            return $this->json(['error' => 'Cannot delete category with subcategories'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->entityManager->remove($category);
+        $this->entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+        ]);
+    }
+
+    private function serializeCategory(Category $category): array
+    {
+        $children = [];
+        foreach ($category->getChildren() as $child) {
+            $children[] = $this->serializeCategory($child);
+        }
+
+        return [
+            'id' => $category->getId(),
+            'name' => $category->getName(),
+            'icon' => $category->getIcon(),
+            'parent' => $category->getParent() ? [
+                'id' => $category->getParent()->getId(),
+                'name' => $category->getParent()->getName(),
+            ] : null,
+            'children' => $children,
+        ];
+    }
+
+    private function serializeCategoryFlat(Category $category): array
+    {
+        return [
+            'id' => $category->getId(),
+            'name' => $category->getName(),
+            'icon' => $category->getIcon(),
+            'parent' => $category->getParent() ? [
+                'id' => $category->getParent()->getId(),
+                'name' => $category->getParent()->getName(),
+            ] : null,
+        ];
     }
 }

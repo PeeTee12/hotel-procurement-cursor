@@ -30,10 +30,22 @@ import {
   MapPin,
   User as UserIcon,
   Mail,
+  Trash2,
+  ChevronRight,
+  ChevronDown,
+  Package,
 } from 'lucide-react'
 import { cn, applyColorScheme, loadColorScheme } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { settingsApi, branchesApi } from '@/lib/api'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/use-toast'
 
 const colorSchemes = [
@@ -573,8 +585,13 @@ export default function SettingsPage() {
           <UsersTabContent />
         </TabsContent>
 
+        {/* Categories tab */}
+        <TabsContent value="categories" className="space-y-6">
+          <CategoriesTabContent />
+        </TabsContent>
+
         {/* Other tabs - placeholder content */}
-        {tabs.filter(tab => tab.id !== 'branding' && tab.id !== 'organization' && tab.id !== 'security' && tab.id !== 'users').map((tab) => (
+        {tabs.filter(tab => tab.id !== 'branding' && tab.id !== 'organization' && tab.id !== 'security' && tab.id !== 'users' && tab.id !== 'categories').map((tab) => (
           <TabsContent key={tab.id} value={tab.id}>
             <Card>
               <CardContent className="py-12 text-center text-gray-500">
@@ -1236,5 +1253,405 @@ function UsersTabContent() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// Categories Tab Content Component
+function CategoriesTabContent() {
+  const { user } = useAuthStore()
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const isAdmin = user?.roles.includes('ROLE_ADMIN')
+
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<{
+    id: number
+    name: string
+    icon: string | null
+    parentId: number | null
+  } | null>(null)
+  const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set())
+
+  // Fetch categories
+  const { data: categoriesData, isLoading } = useQuery({
+    queryKey: ['settings', 'categories'],
+    queryFn: () => settingsApi.getCategories(),
+  })
+
+  const categories = categoriesData?.categories ?? []
+
+  // Flatten categories for parent selection
+  const flattenCategories = (cats: any[], result: any[] = [], excludeId?: number): any[] => {
+    for (const cat of cats) {
+      if (cat.id !== excludeId) {
+        result.push({ id: cat.id, name: cat.name, parent: cat.parent })
+        if (cat.children && cat.children.length > 0) {
+          flattenCategories(cat.children, result, excludeId)
+        }
+      }
+    }
+    return result
+  }
+
+  // Create category mutation
+  const createCategoryMutation = useMutation({
+    mutationFn: (data: { name: string; icon?: string | null; parentId?: number | null }) =>
+      settingsApi.createCategory(data),
+    onSuccess: () => {
+      toast({
+        title: 'Kategorie vytvořena',
+        description: 'Nová kategorie byla úspěšně vytvořena.',
+      })
+      queryClient.invalidateQueries({ queryKey: ['settings', 'categories'] })
+      setIsModalOpen(false)
+      setEditingCategory(null)
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Chyba',
+        description: error.message || 'Nepodařilo se vytvořit kategorii',
+        variant: 'destructive',
+      })
+    },
+  })
+
+  // Update category mutation
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { name?: string; icon?: string | null; parentId?: number | null } }) =>
+      settingsApi.updateCategory(id, data),
+    onSuccess: () => {
+      toast({
+        title: 'Kategorie aktualizována',
+        description: 'Kategorie byla úspěšně aktualizována.',
+      })
+      queryClient.invalidateQueries({ queryKey: ['settings', 'categories'] })
+      setIsModalOpen(false)
+      setEditingCategory(null)
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Chyba',
+        description: error.message || 'Nepodařilo se aktualizovat kategorii',
+        variant: 'destructive',
+      })
+    },
+  })
+
+  // Delete category mutation
+  const deleteCategoryMutation = useMutation({
+    mutationFn: (id: number) => settingsApi.deleteCategory(id),
+    onSuccess: () => {
+      toast({
+        title: 'Kategorie smazána',
+        description: 'Kategorie byla úspěšně smazána.',
+      })
+      queryClient.invalidateQueries({ queryKey: ['settings', 'categories'] })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Chyba',
+        description: error.message || 'Nepodařilo se smazat kategorii',
+        variant: 'destructive',
+      })
+    },
+  })
+
+  const handleAddCategory = () => {
+    setEditingCategory(null)
+    setIsModalOpen(true)
+  }
+
+  const handleEditCategory = (category: any) => {
+    setEditingCategory({
+      id: category.id,
+      name: category.name,
+      icon: category.icon || '',
+      parentId: category.parent?.id || null,
+    })
+    setIsModalOpen(true)
+  }
+
+  const handleDeleteCategory = (id: number) => {
+    if (confirm('Opravdu chcete smazat tuto kategorii?')) {
+      deleteCategoryMutation.mutate(id)
+    }
+  }
+
+  const toggleExpand = (categoryId: number) => {
+    const newExpanded = new Set(expandedCategories)
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId)
+    } else {
+      newExpanded.add(categoryId)
+    }
+    setExpandedCategories(newExpanded)
+  }
+
+  const renderCategory = (category: any, level: number = 0) => {
+    const hasChildren = category.children && category.children.length > 0
+    const isExpanded = expandedCategories.has(category.id)
+
+    return (
+      <div key={category.id} className="border-b border-gray-100 last:border-b-0">
+        <div
+          className={cn(
+            'flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors',
+            level > 0 && 'pl-8'
+          )}
+        >
+          <button
+            onClick={() => hasChildren && toggleExpand(category.id)}
+            className="flex items-center justify-center w-6 h-6"
+            disabled={!hasChildren}
+          >
+            {hasChildren ? (
+              isExpanded ? (
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-gray-400" />
+              )
+            ) : (
+              <div className="w-4 h-4" />
+            )}
+          </button>
+
+          <div className="flex-1 flex items-center gap-3">
+            {category.icon && (
+              <Package className="text-lg" />
+            )}
+            <div className="flex-1">
+              <div className="font-medium text-gray-900">{category.name}</div>
+              {category.parent && (
+                <div className="text-xs text-gray-500">
+                  Rodič: {category.parent.name}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleEditCategory(category)}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => handleDeleteCategory(category.id)}
+                disabled={deleteCategoryMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {hasChildren && isExpanded && (
+          <div>
+            {category.children.map((child: any) => renderCategory(child, level + 1))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">Kategorie</CardTitle>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={handleAddCategory}
+            >
+              <Plus className="h-4 w-4" /> Přidat kategorii
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {categories.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <Tag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Žádné kategorie</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {categories.map((category) => renderCategory(category))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Category Modal */}
+      <CategoryModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setEditingCategory(null)
+        }}
+        category={editingCategory}
+        categories={flattenCategories(categories, [], editingCategory?.id)}
+        onSubmit={(data) => {
+          if (editingCategory) {
+            updateCategoryMutation.mutate({ id: editingCategory.id, data })
+          } else {
+            createCategoryMutation.mutate(data)
+          }
+        }}
+        isSubmitting={createCategoryMutation.isPending || updateCategoryMutation.isPending}
+      />
+    </div>
+  )
+}
+
+// Category Modal Component
+interface CategoryModalProps {
+  isOpen: boolean
+  onClose: () => void
+  category: { id: number; name: string; icon: string | null; parentId: number | null } | null
+  categories: Array<{ id: number; name: string; parent: { id: number; name: string } | null }>
+  onSubmit: (data: { name: string; icon?: string | null; parentId?: number | null }) => void
+  isSubmitting: boolean
+}
+
+function CategoryModal({ isOpen, onClose, category, categories, onSubmit, isSubmitting }: CategoryModalProps) {
+  const [name, setName] = useState('')
+  const [icon, setIcon] = useState('')
+  const [parentId, setParentId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (category) {
+      setName(category.name)
+      setIcon(category.icon || '')
+      setParentId(category.parentId)
+    } else {
+      setName('')
+      setIcon('')
+      setParentId(null)
+    }
+  }, [category, isOpen])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!name.trim()) {
+      return
+    }
+
+    onSubmit({
+      name: name.trim(),
+      icon: icon.trim() || null,
+      parentId: parentId || null,
+    })
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{category ? 'Upravit kategorii' : 'Přidat kategorii'}</DialogTitle>
+          <DialogDescription>
+            {category ? 'Upravte informace o kategorii' : 'Vytvořte novou kategorii'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Název kategorie <span className="text-red-500">*</span>
+            </label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Např. Maso"
+              required
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Ikona (emoji)
+            </label>
+            <Input
+              value={icon}
+              onChange={(e) => setIcon(e.target.value)}
+              placeholder="🍖"
+              maxLength={2}
+              disabled={isSubmitting}
+            />
+            <p className="text-xs text-gray-500 mt-1">Zadejte emoji ikonu (např. 🍖, 🥛, 🥬)</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Rodičovská kategorie
+            </label>
+            <Select
+              value={parentId?.toString() || 'none'}
+              onValueChange={(value) => setParentId(value === 'none' ? null : parseInt(value))}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Žádná (hlavní kategorie)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Žádná (hlavní kategorie)</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id.toString()}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Zrušit
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting || !name.trim()}
+              className="bg-primary"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Ukládám...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  {category ? 'Uložit' : 'Vytvořit'}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

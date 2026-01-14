@@ -182,7 +182,6 @@ export const settingsApi = {
     const formData = new FormData()
     formData.append('logo', file)
     
-    const API_BASE = import.meta.env.VITE_API_URL || '/api'
     const url = `${API_BASE}/settings/logo`
     
     const response = await fetch(url, {
@@ -202,7 +201,6 @@ export const settingsApi = {
     const formData = new FormData()
     formData.append('avatar', file)
     
-    const API_BASE = import.meta.env.VITE_API_URL || '/api'
     const url = `${API_BASE}/settings/avatar`
     
     const response = await fetch(url, {
@@ -270,6 +268,30 @@ export const settingsApi = {
     fetchApi<{ success: boolean; user: any }>(`/settings/users/${userId}/roles`, {
       method: 'PUT',
       body: JSON.stringify({ roles }),
+    }),
+  getCategories: () =>
+    fetchApi<{
+      categories: Array<{
+        id: number
+        name: string
+        icon: string | null
+        parent: { id: number; name: string } | null
+        children: any[]
+      }>
+    }>('/settings/categories'),
+  createCategory: (data: { name: string; icon?: string | null; parentId?: number | null }) =>
+    fetchApi<{ success: boolean; category: any }>('/settings/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateCategory: (id: number, data: { name?: string; icon?: string | null; parentId?: number | null }) =>
+    fetchApi<{ success: boolean; category: any }>(`/settings/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteCategory: (id: number) =>
+    fetchApi<{ success: boolean }>(`/settings/categories/${id}`, {
+      method: 'DELETE',
     }),
 }
 
